@@ -11,6 +11,8 @@
 
 import argparse
 import logging
+from rich.console import Console
+from rich.logging import RichHandler
 
 from .crawler_util import *
 from .slider_util import *
@@ -18,11 +20,14 @@ from .time_util import *
 
 
 def init_loging_config():
+    console = Console()
+    handler = RichHandler(console=console)
     level = logging.INFO
     logging.basicConfig(
         level=level,
         format="%(asctime)s %(name)s %(levelname)s (%(filename)s:%(lineno)d) - %(message)s",
-        datefmt='%Y-%m-%d %H:%M:%S'
+        datefmt='%Y-%m-%d %H:%M:%S',
+        handlers=[handler]
     )
     _logger = logging.getLogger("MediaCrawler")
     _logger.setLevel(level)
