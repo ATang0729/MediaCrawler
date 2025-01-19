@@ -100,9 +100,12 @@ class XiaoHongShuCrawler(AbstractCrawler):
             elif config.CRAWLER_TYPE == "detail":
                 # Get the information and comments of the specified post
                 await self.get_specified_notes()
-            elif config.CRAWLER_TYPE == "creator":
+            elif config.CRAWLER_TYPE == "creator-plus":
                 # Get creator's information and their notes and comments
                 await self.get_creators_and_notes()
+            elif config.CRAWLER_TYPE == "creator-only":
+                # Get creator's information and their notes and comments
+                await self.get_creators_and_notes(only_creators_info=True)
             else:
                 pass
 
@@ -183,7 +186,7 @@ class XiaoHongShuCrawler(AbstractCrawler):
                     )
                     break
 
-    async def get_creators_and_notes(self) -> None:
+    async def get_creators_and_notes(self, only_creators_info: bool = False) -> None:
         """Get creator's notes and retrieve their comment information."""
         utils.logger.info(
             "[XiaoHongShuCrawler.get_creators_and_notes] Begin get xiaohongshu creators"
@@ -195,6 +198,10 @@ class XiaoHongShuCrawler(AbstractCrawler):
             )
             if createor_info:
                 await xhs_store.save_creator(user_id, creator=createor_info)
+
+            # If only_creators_info is True, skip fetching notes and comments
+            if only_creators_info:
+                continue
 
             # When proxy is not enabled, increase the crawling interval
             if config.ENABLE_IP_PROXY:
@@ -300,16 +307,21 @@ class XiaoHongShuCrawler(AbstractCrawler):
                 )
                 time.sleep(crawl_interval)
                 if not note_detail_from_html:
+                    utils.logger.warning(
+                        f"[XiaoHongShuCrawler.get_note_detail_async_task] Get note detail error, "
+                        f"trying to get note detail by id from html without cookie, note_id: {note_id}"
+                    )
                     # 如果网页版笔记详情获取失败，则尝试不使用cookie获取
                     note_detail_from_html = (
                         await self.xhs_client.get_note_by_id_from_html(
                             note_id, xsec_source, xsec_token, enable_cookie=False
                         )
                     )
-                    utils.logger.error(
-                        f"[XiaoHongShuCrawler.get_note_detail_async_task] Get note detail error, note_id: {note_id}"
-                    )
                 if not note_detail_from_html:
+                    utils.logger.warning(
+                        f"[XiaoHongShuCrawler.get_note_detail_async_task] Get note detail error, "
+                        f"trying to get note detail by id from api, note_id: {note_id}"
+                    )
                     # 如果网页版笔记详情获取失败，则尝试API获取
                     note_detail_from_api: Optional[Dict] = (
                         await self.xhs_client.get_note_by_id(
